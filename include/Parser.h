@@ -56,6 +56,7 @@ BIN_NODE(AddNode)
 BIN_NODE(SubNode)
 BIN_NODE(MulNode)
 BIN_NODE(DivNode)
+BIN_NODE(ModNode)
 BIN_NODE(LessNode)
 BIN_NODE(GreaterNode)
 BIN_NODE(EqualNode)
@@ -142,6 +143,7 @@ class Parser {
         while (true) {
             if (match(TOK_STAR)) left = arena.create<MulNode>(left, primary());
             else if (match(TOK_SLASH)) left = arena.create<DivNode>(left, primary());
+            else if (match(TOK_MODULO)) left = arena.create<ModNode>(left, primary());
             else break;
         }
         return left;

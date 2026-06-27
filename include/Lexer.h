@@ -18,7 +18,7 @@ public:
             if (c == '-') { tokens.push_back({TOK_MINUS, std::string_view(source.data() + i, 1)}); i++; continue; }
             if (c == '*') { tokens.push_back({TOK_STAR, std::string_view(source.data() + i, 1)}); i++; continue; }
             if (c == '/') { tokens.push_back({TOK_SLASH, std::string_view(source.data() + i, 1)}); i++; continue; }
-
+            if (c == '%') { tokens.push_back({TOK_MODULO, std::string_view(source.data() + i, 1)}); i++; continue; }
             if (c == '<') { tokens.push_back({TOK_LESS, std::string_view(source.data() + i, 1)}); i++; continue; }
             if (c == '>') { tokens.push_back({TOK_GREATER, std::string_view(source.data() + i, 1)}); i++; continue; }
 

@@ -153,6 +153,16 @@ public:
                     push(a / b);
                     break;
                 }
+                case OP_MOD: {
+                    int b = pop();
+                    int a = pop();
+                    if (b == 0) {
+                        std::cerr << "\nRuntime Error: Modulo by zero at PC " << current_ip << "!" << std::endl;
+                        return;
+                    }
+                    push(a % b);
+                    break;
+                }
 
                 case OP_LESS: {
                     int b = pop();

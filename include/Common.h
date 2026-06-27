@@ -26,6 +26,7 @@ enum TokenType {
     TOK_WHILE,
     TOK_BREAK,
     TOK_CONTINUE,
+    TOK_MODULO,
 
     TOK_EOF
 };
@@ -46,7 +47,7 @@ enum Opcode : uint8_t {
 
     OP_JUMP,
     OP_JUMP_IF_FALSE,
-
+    OP_MOD,
     OP_HALT
 };
 
@@ -58,6 +59,7 @@ inline const char* opcodeToString(uint8_t op) {
         case OP_SUB:           return "OP_SUB";
         case OP_MUL:           return "OP_MUL";
         case OP_DIV:           return "OP_DIV";
+        case OP_MOD:           return "OP_MOD";
         case OP_LESS:          return "OP_LESS";
         case OP_GREATER:       return "OP_GREATER";
         case OP_EQUAL:         return "OP_EQUAL";

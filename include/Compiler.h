@@ -11,7 +11,6 @@ class Compiler {
     std::vector<std::vector<size_t>> continueStack; 
     
     uint8_t varCount = 0;
-
     void emit(uint8_t b) { code.push_back(b); }
 
     size_t emitJump(uint8_t op) {
@@ -48,6 +47,9 @@ class Compiler {
         }
         else if (auto* d = dynamic_cast<DivNode*>(e)) {
             expr(d->l); expr(d->r); emit(OP_DIV);
+        }
+        else if (auto* m = dynamic_cast<ModNode*>(e)) { // <-- Add this block
+            expr(m->l); expr(m->r); emit(OP_MOD);
         }
         else if (auto* l = dynamic_cast<LessNode*>(e)) {           
             expr(l->l); expr(l->r); emit(OP_LESS);         

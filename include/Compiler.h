@@ -14,9 +14,6 @@ class Compiler {
 
     void emit(uint8_t b) { code.push_back(b); }
 
-    // ── FIX: jump placeholders are now 2 bytes (uint16) ────────────
-    // Old code used 1 byte for jump targets, limiting total bytecode
-    // to 255 bytes. Now supports up to 65535 bytes of bytecode.
     size_t emitJump(uint8_t op) {
         emit(op);
         size_t pos = code.size();

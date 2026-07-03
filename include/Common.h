@@ -44,8 +44,7 @@ struct Token {
 //  OPCODES
 // =====================
 enum Opcode : uint8_t {
-    // FIX: OP_PUSH now pushes a 4-byte int32 (4 bytes follow in bytecode)
-    // Old OP_PUSH only stored 1 byte (uint8_t), capping values at 255.
+    
     OP_PUSH,
 
     OP_ADD, OP_SUB, OP_MUL, OP_DIV,
@@ -54,18 +53,17 @@ enum Opcode : uint8_t {
     OP_STORE, OP_LOAD,  // operand: 1-byte variable slot index (max 255 vars)
     OP_PRINT,
 
-    // FIX: OP_JUMP and OP_JUMP_IF_FALSE now use a 2-byte uint16 address
-    // Old versions used 1 byte, limiting bytecode to 255 bytes total.
+    
     OP_JUMP,
     OP_JUMP_IF_FALSE,
 
     OP_MOD,
-    OP_POW,  // new: exponent (base ^ exp)
+    OP_POW,  
 
     OP_HALT
 };
 
-// Utility: translate opcode byte to readable name
+
 inline const char* opcodeToString(uint8_t op) {
     switch (op) {
         case OP_PUSH:          return "OP_PUSH";
@@ -101,7 +99,7 @@ inline void emitInt32(std::vector<uint8_t>& code, int32_t value) {
     code.push_back((value >> 24) & 0xFF);
 }
 
-// Read a 32-bit int from bytecode at position ip, advance ip by 4
+
 inline int32_t readInt32(const std::vector<uint8_t>& code, size_t& ip) {
     int32_t val = 0;
     val |= (int32_t)code[ip + 0] <<  0;
@@ -112,13 +110,12 @@ inline int32_t readInt32(const std::vector<uint8_t>& code, size_t& ip) {
     return val;
 }
 
-// Encode a 16-bit address into 2 bytes (little-endian) and append to bytecode
 inline void emitUint16(std::vector<uint8_t>& code, uint16_t value) {
     code.push_back((value >> 0) & 0xFF);
     code.push_back((value >> 8) & 0xFF);
 }
 
-// Read a 16-bit address from bytecode at position ip, advance ip by 2
+
 inline uint16_t readUint16(const std::vector<uint8_t>& code, size_t& ip) {
     uint16_t val = 0;
     val |= (uint16_t)code[ip + 0] << 0;
@@ -127,7 +124,6 @@ inline uint16_t readUint16(const std::vector<uint8_t>& code, size_t& ip) {
     return val;
 }
 
-// Patch a 16-bit jump address at a previously emitted placeholder position
 inline void patchUint16(std::vector<uint8_t>& code, size_t pos, uint16_t value) {
     code[pos + 0] = (value >> 0) & 0xFF;
     code[pos + 1] = (value >> 8) & 0xFF;

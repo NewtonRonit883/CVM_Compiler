@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CVM++ Web Playground</title>
+    <style>
+        :root {
+            --bg: #0f111a;
+            --surface: #1e212b;
+            --surface-light: #292d3e;
+            --primary: #82aaff;
+            --secondary: #c792ea;
+            --text: #eeffff;
+            --text-muted: #8f93a2;
+            --error: #f07178;
+            --success: #c3e88d;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: var(--surface);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--surface-light);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .run-btn {
+            background-color: var(--success);
+            color: #000;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        .run-btn:hover {
+            background-color: #a3c473;
+            transform: scale(1.05);
+        }
+
+        .run-btn:active {
+            transform: scale(0.95);
+        }
+
+        .workspace {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .editor-pane, .terminal-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--surface-light);
+        }
+
+        .pane-header {
+            background-color: var(--surface-light);
+            padding: 8px 15px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        textarea.code-editor {
+            flex: 1;
+            background-color: transparent;
+            color: var(--text);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1rem;
+            padding: 15px;
+            border: none;
+            resize: none;
+            outline: none;
+            line-height: 1.5;
+        }
+
+        .terminal-pane {
+            flex: 1;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .output-box {
+            flex: 1;
+            padding: 15px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+            overflow-y: auto;
+            color: var(--text);
+            white-space: pre-wrap;
+        }
+
+        .output-box .log { color: var(--success); }
+        .output-box .error { color: var(--error); }
+        .output-box .system { color: var(--text-muted); }
+        .output-box .bytecode { color: var(--secondary); }
+
+        .tabs {
+            display: flex;
+            background-color: var(--surface-light);
+        }
+
+        .tab {
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            background-color: var(--surface);
+        }
+        
+        .output-container {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .output-container.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🚀 CVM++ Web IDE (Fully Synced)</h1>
+        <button class="run-btn" onclick="runCode()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            RUN
+        </button>
+    </header>
+
+    <div class="workspace">
+        <div class="editor-pane">
+            <div class="pane-header">main.cvm</div>
+            <textarea class="code-editor" id="codeEditor" spellcheck="false">
+// Math Operators Test
+let a = 12 % 5;
+print a; // Expected 2
+
+// 32-bit Integer Test
+print 257; 
+
+// Power Test
+print 5 ^ 3; // Expected 125
+
+// Control Flow Test
+let count = 0;
+while(count < 3) {
+    if (count == 1) {
+        print 999;
+    } else {
+        print count;
+    }
+    count = count + 1;
+}
+</textarea>
+        </div>
+        <div class="terminal-pane">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('console')" id="tab-console">Console Output</div>
+                <div class="tab" onclick="switchTab('bytecode')" id="tab-bytecode">Bytecode Blueprint</div>
+            </div>
+            <div class="output-box output-container active" id="out-console">
+                <span class="system">System ready. Waiting for execution...</span>
+            </div>
+            <div class="output-box output-container" id="out-bytecode">
+                <span class="system">Compile code to see bytecode...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // UI Logic
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.output-container').forEach(c => c.classList.remove('active'));
+            
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            document.querySelectorAll('.output-container').forEach(c => c.style.display = 'none');
+            document.getElementById(`out-${tabId}`).style.display = 'block';
+        }
+
+        function logConsole(msg, type="log") {
+            const out = document.getElementById('out-console');
+            out.innerHTML += `<div class="${type}">${msg}</div>`;
+            out.scrollTop = out.scrollHeight;
+        }
+
+        function logBytecode(msg) {
+            const out = document.getElementById('out-bytecode');
+            out.innerHTML += `<div class="bytecode">${msg}</div>`;
+        }
+
+        function clearConsole() {
+            document.getElementById('out-console').innerHTML = '';
+            document.getElementById('out-bytecode').innerHTML = '';
+        }
+
+        // ==========================================
+        // CVM++ PIPELINE (1:1 Port of C++ Logic)
+        // ==========================================
+
+        const TokenType = {
+            LET: 'LET', PRINT: 'PRINT', WHILE: 'WHILE', IF: 'IF', ELSE: 'ELSE',
+            IDENTIFIER: 'IDENTIFIER', NUMBER: 'NUMBER',
+            PLUS: 'PLUS', MINUS: 'MINUS', MUL: 'MUL', DIV: 'DIV', MODULO: 'MODULO', POW: 'POW',
+            EQUAL: 'EQUAL', LESS: 'LESS', GREATER: 'GREATER', ASSIGN: 'ASSIGN',
+            LPAREN: 'LPAR', RPAREN: 'RPAR', LBRACE: 'LBRACE', RBRACE: 'RBRACE',
+            SEMICOLON: 'SEMI', EOF: 'EOF'
+        };
+
+        const Opcodes = {
+            OP_PUSH: 0, OP_ADD: 1, OP_SUB: 2, OP_MUL: 3, OP_DIV: 4, 
+            OP_LESS: 5, OP_GREATER: 6, OP_EQUAL: 7, OP_STORE: 8, OP_LOAD: 9, 
+            OP_PRINT: 10, OP_JUMP: 11, OP_JUMP_IF_FALSE: 12, OP_MODULO: 13, OP_POW: 14, OP_HALT: 15
+        };
+
+        function getOpName(val) {
+            for (let [k, v] of Object.entries(Opcodes)) if (v === val) return k;
+            return "OP_UNKNOWN";
+        }
+
+        function tokenize(source) {
+            const tokens = [];
+            let i = 0;
+            while (i < source.length) {
+                let c = source[i];
+                if (/\s/.test(c)) { i++; continue; }
+                
+                // COMMENT LOGIC
+                if (c === '/') {
+                    if (i + 1 < source.length && source[i+1] === '/') {
+                        while (i < source.length && source[i] !== '\n') i++;
+                        continue;
+                    } else {
+                        tokens.push({ type: TokenType.DIV, text: "/" }); i++; continue;
+                    }
+                }
+
+                if (/[a-zA-Z_]/.test(c)) {
+                    let word = "";
+                    while (i < source.length && /[a-zA-Z0-9_]/.test(source[i])) { word += source[i]; i++; }
+                    if (word === "let") tokens.push({ type: TokenType.LET, text: word });
+                    else if (word === "print") tokens.push({ type: TokenType.PRINT, text: word });
+                    else if (word === "while") tokens.push({ type: TokenType.WHILE, text: word });
+                    else if (word === "if") tokens.push({ type: TokenType.IF, text: word });
+                    else if (word === "else") tokens.push({ type: TokenType.ELSE, text: word });
+                    else tokens.push({ type: TokenType.IDENTIFIER, text: word });
+                    continue;
+                }
+                if (/[0-9]/.test(c)) {
+                    let num = "";
+                    while (i < source.length && /[0-9]/.test(source[i])) { num += source[i]; i++; }
+                    tokens.push({ type: TokenType.NUMBER, text: num });
+                    continue;
+                }
+                if (c === '=') {
+                    if (i + 1 < source.length && source[i+1] === '=') { tokens.push({ type: TokenType.EQUAL, text: "==" }); i+=2; }
+                    else { tokens.push({ type: TokenType.ASSIGN, text: "=" }); i++; }
+                    continue;
+                }
+                if (c === '+') { tokens.push({ type: TokenType.PLUS, text: "+" }); i++; continue; }
+                if (c === '-') { tokens.push({ type: TokenType.MINUS, text: "-" }); i++; continue; }
+                if (c === '*') { tokens.push({ type: TokenType.MUL, text: "*" }); i++; continue; }
+                if (c === '%') { tokens.push({ type: TokenType.MODULO, text: "%" }); i++; continue; }
+                if (c === '^') { tokens.push({ type: TokenType.POW, text: "^" }); i++; continue; }
+                if (c === '<') { tokens.push({ type: TokenType.LESS, text: "<" }); i++; continue; }
+                if (c === '>') { tokens.push({ type: TokenType.GREATER, text: ">" }); i++; continue; }
+                if (c === '(') { tokens.push({ type: TokenType.LPAREN, text: "(" }); i++; continue; }
+                if (c === ')') { tokens.push({ type: TokenType.RPAREN, text: ")" }); i++; continue; }
+                if (c === '{') { tokens.push({ type: TokenType.LBRACE, text: "{" }); i++; continue; }
+                if (c === '}') { tokens.push({ type: TokenType.RBRACE, text: "}" }); i++; continue; }
+                if (c === ';') { tokens.push({ type: TokenType.SEMICOLON, text: ";" }); i++; continue; }
+                throw new Error(`Lexer Error: Unexpected '${c}'`);
+            }
+            tokens.push({ type: TokenType.EOF, text: "" });
+            return tokens;
+        }
+
+        class Parser {
+            constructor(tokens) { this.tokens = tokens; this.pos = 0; }
+            peek() { return this.tokens[this.pos]; }
+            advance() { return this.tokens[this.pos++]; }
+            match(type) { if (this.peek().type === type) { this.advance(); return true; } return false; }
+            consume(type, errMsg) { if (this.match(type)) return; throw new Error(`Parser Error: ${errMsg}`); }
+
+            parse() {
+                const stmts = [];
+                while (this.peek().type !== TokenType.EOF) stmts.push(this.statement());
+                return stmts;
+            }
+
+            block() {
+                const stmts = [];
+                this.consume(TokenType.LBRACE, "Expected '{'");
+                while (this.peek().type !== TokenType.RBRACE && this.peek().type !== TokenType.EOF) {
+                    stmts.push(this.statement());
+                }
+                this.consume(TokenType.RBRACE, "Expected '}'");
+                return { type: 'Block', stmts };
+            }
+
+            statement() {
+                if (this.match(TokenType.LET)) {
+                    const name = this.peek().text; this.consume(TokenType.IDENTIFIER, "Expected ID");
+                    this.consume(TokenType.ASSIGN, "Expected '='");
+                    const e = this.expression(); this.consume(TokenType.SEMICOLON, "Expected ';'");
+                    return { type: 'Let', name: name, expr: e };
+                }
+                if (this.peek().type === TokenType.IDENTIFIER && this.tokens[this.pos+1].type === TokenType.ASSIGN) {
+                    const name = this.advance().text;
+                    this.consume(TokenType.ASSIGN, "Expected '='");
+                    const e = this.expression(); this.consume(TokenType.SEMICOLON, "Expected ';'");
+                    return { type: 'Let', name: name, expr: e }; // Re-using Let for assignment in simplified AST
+                }
+                if (this.match(TokenType.PRINT)) {
+                    const e = this.expression(); this.consume(TokenType.SEMICOLON, "Expected ';'");
+                    return { type: 'Print', expr: e };
+                }
+                if (this.match(TokenType.WHILE)) {
+                    this.consume(TokenType.LPAREN, "Expected '('");
+                    const cond = this.expression();
+                    this.consume(TokenType.RPAREN, "Expected ')'");
+                    const body = this.block();
+                    return { type: 'While', cond, body };
+                }
+                if (this.match(TokenType.IF)) {
+                    this.consume(TokenType.LPAREN, "Expected '('");
+                    const cond = this.expression();
+                    this.consume(TokenType.RPAREN, "Expected ')'");
+                    const thenBlock = this.block();
+                    let elseBlock = null;
+                    if (this.match(TokenType.ELSE)) elseBlock = this.block();
+                    return { type: 'If', cond, thenBlock, elseBlock };
+                }
+                throw new Error(`Unexpected token '${this.peek().text}'`);
+            }
+
+            expression() { return this.equality(); }
+
+            equality() {
+                let left = this.comparison();
+                while (this.match(TokenType.EQUAL)) left = { type: 'Binary', op: TokenType.EQUAL, left: left, right: this.comparison() };
+                return left;
+            }
+
+            comparison() {
+                let left = this.addition();
+                while (this.match(TokenType.LESS) || this.match(TokenType.GREATER)) {
+                    let op = this.tokens[this.pos - 1].type;
+                    left = { type: 'Binary', op: op, left: left, right: this.addition() };
+                }
+                return left;
+            }
+            
+            addition() {
+                let left = this.multiplication();
+                while (this.match(TokenType.PLUS) || this.match(TokenType.MINUS)) {
+                    let op = this.tokens[this.pos - 1].type;
+                    left = { type: 'Binary', op: op, left: left, right: this.multiplication() };
+                }
+                return left;
+            }
+
+            multiplication() {
+                let left = this.power();
+                while (this.match(TokenType.MUL) || this.match(TokenType.DIV) || this.match(TokenType.MODULO)) {
+                    let op = this.tokens[this.pos - 1].type;
+                    left = { type: 'Binary', op: op, left: left, right: this.power() };
+                }
+                return left;
+            }
+
+            power() {
+                let left = this.primary();
+                while (this.match(TokenType.POW)) {
+                    left = { type: 'Binary', op: TokenType.POW, left: left, right: this.primary() }; // Pow is right-associative usually, but left is fine for demo
+                }
+                return left;
+            }
+
+            primary() {
+                if (this.match(TokenType.NUMBER)) return { type: 'Number', val: parseInt(this.tokens[this.pos - 1].text) };
+                if (this.match(TokenType.IDENTIFIER)) return { type: 'Var', name: this.tokens[this.pos - 1].text };
+                if (this.match(TokenType.LPAREN)) {
+                    let e = this.expression();
+                    this.consume(TokenType.RPAREN, "Expected ')'");
+                    return e;
+                }
+                throw new Error("Expected Expression");
+            }
+        }
+
+        class Compiler {
+            constructor() { this.code = []; this.vars = {}; this.varCount = 0; }
+            emit(b) { this.code.push(b); }
+            emitInt32(val) {
+                this.emit((val >> 24) & 0xFF);
+                this.emit((val >> 16) & 0xFF);
+                this.emit((val >> 8) & 0xFF);
+                this.emit(val & 0xFF);
+            }
+            emitJump(op) { this.emit(op); this.emit(0); return this.code.length - 1; }
+            patchJump(pos) { this.code[pos] = this.code.length; }
+
+            compile(ast) { 
+                this.code = []; 
+                for (let s of ast) this.compileStmt(s); 
+                this.emit(Opcodes.OP_HALT); 
+                
+                // Disassemble for UI
+                let i = 0;
+                while(i < this.code.length) {
+                    let op = this.code[i];
+                    let str = `Offset ${i.toString().padStart(3, '0')}: ${getOpName(op).padEnd(16)}`;
+                    if (op === Opcodes.OP_PUSH) {
+                        let val = (this.code[i+1]<<24) | (this.code[i+2]<<16) | (this.code[i+3]<<8) | this.code[i+4];
+                        str += `[Operand: ${val}]`; i += 5;
+                    } else if (op === Opcodes.OP_STORE || op === Opcodes.OP_LOAD || op === Opcodes.OP_JUMP || op === Opcodes.OP_JUMP_IF_FALSE) {
+                        str += `[Operand: ${this.code[i+1]}]`; i += 2;
+                    } else i += 1;
+                    logBytecode(str);
+                }
+                return this.code; 
+            }
+
+            compileStmt(node) {
+                if (node.type === 'Let') { 
+                    this.compileExpr(node.expr); 
+                    if (!(node.name in this.vars)) this.vars[node.name] = this.varCount++; 
+                    this.emit(Opcodes.OP_STORE); this.emit(this.vars[node.name]); 
+                }
+                else if (node.type === 'Print') { this.compileExpr(node.expr); this.emit(Opcodes.OP_PRINT); }
+                else if (node.type === 'Block') { for(let s of node.stmts) this.compileStmt(s); }
+                else if (node.type === 'If') {
+                    this.compileExpr(node.cond);
+                    let jFalse = this.emitJump(Opcodes.OP_JUMP_IF_FALSE);
+                    this.compileStmt(node.thenBlock);
+                    let jEnd = this.emitJump(Opcodes.OP_JUMP);
+                    this.patchJump(jFalse);
+                    if (node.elseBlock) this.compileStmt(node.elseBlock);
+                    this.patchJump(jEnd);
+                }
+                else if (node.type === 'While') {
+                    let loopStart = this.code.length;
+                    this.compileExpr(node.cond);
+                    let jFalse = this.emitJump(Opcodes.OP_JUMP_IF_FALSE);
+                    this.compileStmt(node.body);
+                    this.emit(Opcodes.OP_JUMP); this.emit(loopStart);
+                    this.patchJump(jFalse);
+                }
+            }
+
+            compileExpr(node) {
+                if (node.type === 'Number') { this.emit(Opcodes.OP_PUSH); this.emitInt32(node.val); }
+                else if (node.type === 'Var') { this.emit(Opcodes.OP_LOAD); this.emit(this.vars[node.name]); }
+                else if (node.type === 'Binary') {
+                    this.compileExpr(node.left); this.compileExpr(node.right);
+                    if (node.op === TokenType.PLUS) this.emit(Opcodes.OP_ADD);
+                    else if (node.op === TokenType.MINUS) this.emit(Opcodes.OP_SUB);
+                    else if (node.op === TokenType.MUL) this.emit(Opcodes.OP_MUL);
+                    else if (node.op === TokenType.DIV) this.emit(Opcodes.OP_DIV);
+                    else if (node.op === TokenType.MODULO) this.emit(Opcodes.OP_MODULO);
+                    else if (node.op === TokenType.POW) this.emit(Opcodes.OP_POW);
+                    else if (node.op === TokenType.LESS) this.emit(Opcodes.OP_LESS);
+                    else if (node.op === TokenType.GREATER) this.emit(Opcodes.OP_GREATER);
+                    else if (node.op === TokenType.EQUAL) this.emit(Opcodes.OP_EQUAL);
+                }
+            }
+        }
+
+        class VM {
+            constructor() { this.stack = []; this.vars = new Array(256).fill(0); }
+            run(bytecode) {
+                let ip = 0;
+                let cycles = 0;
+                while (ip < bytecode.length) {
+                    cycles++;
+                    if (cycles > 10000) { logConsole("Infinite loop prevented", "error"); break; }
+                    let inst = bytecode[ip++];
+                    
+                    if (inst === Opcodes.OP_PUSH) {
+                        let val = (bytecode[ip]<<24) | (bytecode[ip+1]<<16) | (bytecode[ip+2]<<8) | bytecode[ip+3];
+                        this.stack.push(val); ip += 4;
+                    }
+                    else if (inst === Opcodes.OP_LOAD) { this.stack.push(this.vars[bytecode[ip++]]); }
+                    else if (inst === Opcodes.OP_STORE) { this.vars[bytecode[ip++]] = this.stack.pop(); }
+                    
+                    else if (inst === Opcodes.OP_ADD) { let b = this.stack.pop(), a = this.stack.pop(); this.stack.push(a + b); }
+                    else if (inst === Opcodes.OP_SUB) { let b = this.stack.pop(), a = this.stack.pop(); this.stack.push(a - b); }
+                    else if (inst === Opcodes.OP_MUL) { let b = this.stack.pop(), a = this.stack.pop(); this.stack.push(a * b); }
+                    else if (inst === Opcodes.OP_DIV) { 
+                        let b = this.stack.pop(), a = this.stack.pop(); 
+                        if (b===0) throw new Error("Divide by zero");
+                        this.stack.push(Math.floor(a / b)); 
+                    }
+                    else if (inst === Opcodes.OP_MODULO) { 
+                        let b = this.stack.pop(), a = this.stack.pop(); 
+                        if (b===0) throw new Error("Modulo by zero");
+                        this.stack.push(a % b); 
+                    }
+                    else if (inst === Opcodes.OP_POW) { let b = this.stack.pop(), a = this.stack.pop(); this.stack.push(Math.pow(a, b)); }
+                    
+                    else if (inst === Opcodes.OP_LESS) { let b = this.stack.pop(), a = this.stack.pop(); this.stack.push(a < b ? 1 : 0); }
+                    else if (inst === Opcodes.OP_GREATER) { let b = this.stack.pop(), a = this.stack.pop(); this.stack.push(a > b ? 1 : 0); }
+                    else if (inst === Opcodes.OP_EQUAL) { let b = this.stack.pop(), a = this.stack.pop(); this.stack.push(a === b ? 1 : 0); }
+
+                    else if (inst === Opcodes.OP_JUMP) { ip = bytecode[ip]; }
+                    else if (inst === Opcodes.OP_JUMP_IF_FALSE) {
+                        let cond = this.stack.pop();
+                        let target = bytecode[ip++];
+                        if (cond === 0) ip = target;
+                    }
+
+                    else if (inst === Opcodes.OP_PRINT) { logConsole(this.stack.pop()); }
+                    else if (inst === Opcodes.OP_HALT) break;
+                }
+            }
+        }
+
+        function runCode() {
+            clearConsole();
+            const source = document.getElementById('codeEditor').value;
+            try {
+                const ast = new Parser(tokenize(source)).parse();
+                const bytecode = new Compiler().compile(ast);
+                new VM().run(bytecode);
+                logConsole("Execution complete.", "system");
+            } catch (err) { logConsole(err.message, "error"); }
+        }
+    </script>
+</body>
+</html>

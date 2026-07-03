@@ -12,19 +12,14 @@ public:
         while (i < source.length()) {
             char c = source[i];
 
-            // ── Whitespace ──────────────────────────────────────────
             if (std::isspace(c)) { i++; continue; }
 
-            // ── Single-line comments: skip from // to end of line ──
-            // FIX: Previously // would cause a lex error or be tokenized
-            // as two TOK_SLASH tokens. Now we detect // and skip the
-            // rest of the line entirely before any other checks.
             if (c == '/' && i + 1 < source.length() && source[i + 1] == '/') {
                 while (i < source.length() && source[i] != '\n') i++;
                 continue;
             }
 
-            // ── Single-char operators ────────────────────────────────
+            
             if (c == '+') { tokens.push_back({TOK_PLUS,    {source.data() + i, 1}}); i++; continue; }
             if (c == '-') { tokens.push_back({TOK_MINUS,   {source.data() + i, 1}}); i++; continue; }
             if (c == '*') { tokens.push_back({TOK_STAR,    {source.data() + i, 1}}); i++; continue; }
@@ -34,7 +29,7 @@ public:
             if (c == '<') { tokens.push_back({TOK_LESS,    {source.data() + i, 1}}); i++; continue; }
             if (c == '>') { tokens.push_back({TOK_GREATER, {source.data() + i, 1}}); i++; continue; }
 
-            // ── = vs == ─────────────────────────────────────────────
+            
             if (c == '=') {
                 if (i + 1 < source.length() && source[i + 1] == '=') {
                     tokens.push_back({TOK_EQUAL, {source.data() + i, 2}});
@@ -52,7 +47,7 @@ public:
             if (c == '{') { tokens.push_back({TOK_LBRACE, {source.data() + i, 1}}); i++; continue; }
             if (c == '}') { tokens.push_back({TOK_RBRACE, {source.data() + i, 1}}); i++; continue; }
 
-            // ── Integer literals ─────────────────────────────────────
+           
             if (std::isdigit(c)) {
                 size_t start = i;
                 while (i < source.length() && std::isdigit(source[i])) i++;
@@ -60,7 +55,7 @@ public:
                 continue;
             }
 
-            // ── Identifiers and keywords ─────────────────────────────
+           
             if (std::isalpha(c) || c == '_') {
                 size_t start = i;
                 while (i < source.length() && (std::isalnum(source[i]) || source[i] == '_')) i++;
@@ -80,7 +75,7 @@ public:
                 continue;
             }
 
-            // Unknown character — skip silently
+            
             i++;
         }
 
